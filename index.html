@@ -18,7 +18,6 @@
         .clear-btn:hover { background-color: #dc2626; }
         .hidden { display: none; }
         
-        /* Loaded Files Panel Layout */
         .files-panel { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
         .files-title { font-size: 14px; font-weight: 600; color: #4b5563; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
         .file-list { display: flex; flex-wrap: wrap; gap: 8px; }
@@ -44,25 +43,25 @@
 
     <div class="container">
         <h1>Master Attendance Combiner</h1>
-        <p>Upload files dynamically. Separator lines (only commas) are skipped automatically. Columns are mapped by their top header titles. Track and remove uploaded files instantly.</p>
+        <p>Upload files dynamically. Line 1 reads your headers, Line 2 (commas) is explicitly skipped, and Line 3+ maps raw data based purely on your header titles.</p>
 
-        <!-- Step 1: Upload Controls -->
+        <!-- Step 1: Upload Layout -->
         <div class="upload-section">
             <div class="upload-zone" onclick="document.getElementById('csvFiles').click()">
                 <input type="file" id="csvFiles" accept=".csv" multiple style="display:none;" />
                 <span class="upload-text">Click to Add/Upload CSV Files</span>
-                <span class="upload-subtext">Supports single file uploads, multiple files, or adding files sequentially over time</span>
+                <span class="upload-subtext">Supports single file uploads, multiple files, or adding files over time</span>
             </div>
             <button id="clearBtn" class="clear-btn hidden">Reset All</button>
         </div>
 
-        <!-- File Tracking Panel -->
+        <!-- Loaded Files Panel Matrix -->
         <div id="filesPanel" class="files-panel hidden">
             <div class="files-title">Currently Loaded Files</div>
             <div id="fileList" class="file-list"></div>
         </div>
 
-        <!-- Step 2: Grid and Download Action Panel -->
+        <!-- Step 2: Output Presentation -->
         <div id="tableContainer" class="hidden">
             <div class="action-bar">
                 <div style="display: flex; align-items: center;">
@@ -93,13 +92,13 @@
     </div>
 
     <script>
-        // Special custom structure-aware parser
-        const ContextAwareParser = {
+        const CustomThreeLineParser = {
             parse: function(text, fileName) {
                 const lines = [];
                 let row = [""];
                 let inQuotes = false;
 
+                // Standard baseline CSV text decomposition chunking
                 for (let i = 0; i < text.length; i++) {
                     let c = text[i];
                     let next = text[i+1];
@@ -120,23 +119,29 @@
                 if (row.length > 1 || row !== '') lines.push(row);
                 if (lines.length === 0) return [];
 
-                // Step 1: Capture headers from the top line
+                // LINE 1: Dynamic tracking header definitions 
                 const rawHeaders = lines.shift().map(h => h.trim().replace(/^"|"$/g, ''));
                 
                 const finalRows = [];
+                let isLineTwo = true;
 
-                // Step 2: Loop through data lines and discard clean commas/empty rows
+                // Process remaining file layout tracking data
                 lines.forEach(line => {
                     const lineContent = line.join('').trim();
-                    // Skip separation lines that contain only commas or are completely empty
-                    if (lineContent === "" || /^,+$/.test(lineContent)) {
+                    if (lineContent === "") return; // Drop purely empty spacing rows
+
+                    // LINE 2 DETECTOR: If it's the very first row below titles and contains only commas, explicitly drop it
+                    if (isLineTwo && /^,+$/.test(lineContent)) {
+                        isLineTwo = false;
                         return; 
                     }
+                    isLineTwo = false; // Toggle flag tracking off immediately after handling row 2
 
-                    let obj = { _originFile: fileName }; // Keep an internal track record of origin
+                    // LINE 3 AND BEYOND: Collect authentic data rows
+                    let obj = { _originFile: fileName };
                     rawHeaders.forEach((header, index) => {
                         if (header) {
-                            obj[header] = line[index] !== undefined ? line[index].trim() : "";
+                            obj[header] = line[index] !== undefined ? line[index].trim().replace(/^"|"$/g, '') : "";
                         }
                     });
                     finalRows.push(obj);
@@ -162,12 +167,12 @@
         const rowCountBadge = document.getElementById('rowCountBadge');
         const fileCountBadge = document.getElementById('fileCountBadge');
 
+        // Master file standard formatting order
         const targetHeaders = [
             "SNo", "Participant Name", "Attendance Started at", 
             "Joined at(beta)", "Attendance Stopped at", "Attended Duration", "Meeting code"
         ];
 
-        // Core system data tracking states
         let masterData = [];
         let uploadedFilesTrackList = []; 
 
@@ -175,8 +180,3 @@
             const files = e.target.files;
             if (!files || files.length === 0) return;
 
-            for (let i = 0; i < files.length; i++) {
-                const file = files[i];
-                
-                // Prevent processing exact duplicate named file loads directly
-                if (uploadedFilesTrackList.includes(file.name)) {
