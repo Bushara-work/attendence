@@ -16,16 +16,14 @@
         .upload-subtext { font-size: 13px; color: #6b7280; display: block; margin-top: 4px; }
         .clear-btn { background-color: #ef4444; color: white; border: none; padding: 0 24px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 14px; transition: background 0.2s; }
         .clear-btn:hover { background-color: #dc2626; }
-        .hidden { display: none; }
+        .hidden { display: none !important; }
         
-        /* Error Log console style */
-        .error-log { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; border-radius: 8px; padding: 12px 16px; margin-bottom: 24px; font-size: 14px; }
-        
+        /* Loaded Files Tracking Section */
         .files-panel { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 24px; }
         .files-title { font-size: 14px; font-weight: 600; color: #4b5563; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
         .file-list { display: flex; flex-wrap: wrap; gap: 8px; }
         .file-chip { background: #e0e7ff; color: #4338ca; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 500; display: flex; align-items: center; gap: 8px; border: 1px solid #c7d2fe; }
-        .remove-file-btn { background: none; border: none; color: #ef4444; font-weight: bold; cursor: pointer; font-size: 14px; padding: 0 2px; }
+        .remove-file-btn { background: none; border: none; color: #ef4444; font-weight: bold; cursor: pointer; font-size: 16px; padding: 0 4px; line-height: 1; }
         .remove-file-btn:hover { color: #b91c1c; }
 
         .action-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; margin-bottom: 16px; }
@@ -46,32 +44,29 @@
 
     <div class="container">
         <h1>Master Attendance Combiner</h1>
-        <p>Batch upload or single upload files. Columns automatically map by matching titles. Blank comma lines anywhere are ignored.</p>
+        <p>Upload files one at a time or together. Line 1 sets your column locations. Clean comma separator lines are ignored automatically.</p>
 
-        <!-- Step 1: Upload Controls -->
+        <!-- Step 1: Upload Files Area -->
         <div class="upload-section">
             <div class="upload-zone" onclick="document.getElementById('csvFiles').click()">
                 <input type="file" id="csvFiles" accept=".csv" multiple style="display:none;" />
-                <span class="upload-text">Click to Add/Upload CSV Files (Batch Select Allowed)</span>
-                <span class="upload-subtext">You can pick multiple files at once or add them one after another</span>
+                <span class="upload-text">Click here to select CSV File(s)</span>
+                <span class="upload-subtext">You can add files one by one or upload multiple files at once</span>
             </div>
-            <button id="clearBtn" class="clear-btn hidden">Reset All</button>
+            <button id="clearBtn" class="clear-btn hidden">Clear All</button>
         </div>
 
-        <!-- Live Diagnostics Warning Window -->
-        <div id="errorLog" class="error-log hidden"></div>
-
-        <!-- Loaded Files Panel -->
+        <!-- File Chip Management Tracker View Component -->
         <div id="filesPanel" class="files-panel hidden">
             <div class="files-title">Currently Loaded Files</div>
             <div id="fileList" class="file-list"></div>
         </div>
 
-        <!-- Step 2: Output Matrix -->
+        <!-- Step 2: Output Presentation Table -->
         <div id="tableContainer" class="hidden">
             <div class="action-bar">
                 <div style="display: flex; align-items: center;">
-                    <h2>Master Output Grid</h2>
+                    <h2>Master Output Grid (Editable)</h2>
                     <span id="rowCountBadge" class="stats-badge">0 Rows</span>
                     <span id="fileCountBadge" class="stats-badge" style="background:#fef3c7; color:#92400e;">0 Files</span>
                 </div>
@@ -98,63 +93,6 @@
     </div>
 
     <script>
-        const SmartCSVParser = {
-            parse: function(text, fileName) {
-                const lines = [];
-                let row = [""];
-                let inQuotes = false;
-
-                for (let i = 0; i < text.length; i++) {
-                    let c = text[i];
-                    let next = text[i+1];
-
-                    if (c === '"') {
-                        if (inQuotes && next === '"') { row[row.length - 1] += '"'; i++; }
-                        else { inQuotes = !inQuotes; }
-                    } else if (c === ',' && !inQuotes) {
-                        row.push('');
-                    } else if ((c === '\r' || c === '\n') && !inQuotes) {
-                        if (c === '\r' && next === '\n') { i++; }
-                        lines.push(row);
-                        row = [''];
-                    } else {
-                        row[row.length - 1] += c;
-                    }
-                }
-                if (row.length > 1 || row !== '') lines.push(row);
-                
-                if (lines.length === 0) return { headers: [], rows: [] };
-
-                // Extract headers from the very first row safely
-                const rawHeaders = lines.shift().map(h => h.trim().replace(/^"|"$/g, ''));
-                const finalRows = [];
-
-                // Filter data rows seamlessly
-                lines.forEach(line => {
-                    const lineContent = line.join('').trim();
-                    
-                    // Skip completely empty lines or lines with ONLY commas (e.g., ",,,,,")
-                    if (lineContent === "" || /^,+$/.test(lineContent)) {
-                        return; 
-                    }
-
-                    let obj = { _originFile: fileName };
-                    rawHeaders.forEach((header, index) => {
-                        if (header) {
-                            obj[header] = line[index] !== undefined ? line[index].trim().replace(/^"|"$/g, '') : "";
-                        }
-                    });
-                    finalRows.push(obj);
-                });
-
-                return { headers: rawHeaders, rows: finalRows };
-            },
-            stringify: function(headers, data) {
-                const escape = val => `"${String(val).replace(/"/g, '""')}"`;
-                return [headers.join(','), ...data.map(row => headers.map(h => escape(row[h] || "")).join(','))].join('\n');
-            }
-        };
-
         const csvFilesInput = document.getElementById('csvFiles');
         const tableContainer = document.getElementById('tableContainer');
         const tableBody = document.getElementById('tableBody');
@@ -164,7 +102,6 @@
         const fileList = document.getElementById('fileList');
         const rowCountBadge = document.getElementById('rowCountBadge');
         const fileCountBadge = document.getElementById('fileCountBadge');
-        const errorLog = document.getElementById('errorLog');
 
         const targetHeaders = [
             "SNo", "Participant Name", "Attendance Started at", 
@@ -174,13 +111,77 @@
         let masterData = [];
         let uploadedFilesTrackList = []; 
 
+        // Simplified native CSV parser
+        function parseCSVText(text, fileName) {
+            const lines = [];
+            let currentLine = [""];
+            let inQuotes = false;
+
+            for (let i = 0; i < text.length; i++) {
+                let c = text[i];
+                let next = text[i+1];
+
+                if (c === '"') {
+                    if (inQuotes && next === '"') { currentLine[currentLine.length - 1] += '"'; i++; }
+                    else { inQuotes = !inQuotes; }
+                } else if (c === ',' && !inQuotes) {
+                    currentLine.push('');
+                } else if ((c === '\r' || c === '\n') && !inQuotes) {
+                    if (c === '\r' && next === '\n') { i++; }
+                    lines.push(currentLine);
+                    currentLine = [''];
+                } else {
+                    currentLine[currentLine.length - 1] += c;
+                }
+            }
+            if (currentLine.length > 1 || currentLine[0] !== '') lines.push(currentLine);
+            if (lines.length === 0) return [];
+
+            // Extract the clean header labels from Line 1
+            const headers = lines.shift().map(h => h.trim().replace(/^"|"$/g, ''));
+            const dataRows = [];
+
+            lines.forEach(line => {
+                const contentTest = line.join('').trim();
+                // Explicitly drop lines that contain only structural commas or are empty
+                if (contentTest === "" || /^,+$/.test(contentTest)) {
+                    return; 
+                }
+
+                let rowObject = { _originFile: fileName };
+                headers.forEach((header, index) => {
+                    if (header) {
+                        rowObject[header] = line[index] !== undefined ? line[index].trim().replace(/^"|"$/g, '') : "";
+                    }
+                });
+                dataRows.push(rowObject);
+            });
+
+            return dataRows;
+        }
+
         csvFilesInput.addEventListener('change', async (e) => {
             const files = e.target.files;
             if (!files || files.length === 0) return;
 
-            errorLog.classList.add('hidden');
-            errorLog.textContent = "";
-
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
                 
+                if (uploadedFilesTrackList.includes(file.name)) {
+                    alert(`"${file.name}" is already loaded.`);
+                    continue;
+                }
+
+                const text = await readFileAsText(file);
+                const parsedRows = parseCSVText(text, file.name);
+                
+                if (parsedRows.length === 0) continue;
+
+                // Title reader fuzzy search mapping logic
+                const mappedRows = parsedRows.map(row => {
+                    let extracted = { _originFile: file.name };
+
+                    const findValue = (exactTarget, fuzzyKeywords) => {
+                        for (let key in row) {
+                            if (key.toLowerCase().trim() === exactTarget.toLowerCase().trim()) {
+                                return row[key];
