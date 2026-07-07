@@ -3,74 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Attendance Organizer</title>
+    <title>Master Attendance Combiner</title>
     <style>
-        /* Built-in fallback styling to replace external frameworks */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #f3f4f6; color: #1f2937; margin: 0; padding: 24px; }
-        .container { max-w: 1100px; max-width: 1100px; margin: 0 auto; background: #ffffff; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        .container { max-width: 1200px; margin: 0 auto; background: #ffffff; padding: 32px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
         h1 { margin-top: 0; margin-bottom: 8px; font-size: 28px; color: #111827; }
         p { margin-top: 0; margin-bottom: 24px; color: #4b5563; }
         .upload-zone { border: 2px dashed #d1d5db; border-radius: 8px; padding: 32px; text-align: center; background: #f9fafb; cursor: pointer; transition: background 0.2s; }
         .upload-zone:hover { background: #f3f4f6; }
-        .upload-text { color: #2563eb; font-weight: 600; text-decoration: underline; display: block; }
-        .upload-subtext { font-size: 13px; color: #6b7280; display: block; margin-top: 4px; }
+        .upload-text { color: #2563eb; font-weight: 600; text-decoration: underline; display: block; font-size: 18px; }
+        .upload-subtext { font-size: 13px; color: #6b7280; display: block; margin-top: 6px; }
         .hidden { display: none; }
         .action-bar { display: flex; justify-content: space-between; align-items: center; margin-top: 24px; margin-bottom: 16px; }
         h2 { font-size: 18px; margin: 0; color: #374151; }
         .download-btn { background-color: #059669; color: white; border: none; padding: 10px 24px; font-weight: bold; border-radius: 6px; cursor: pointer; transition: background 0.2s; font-size: 14px; }
         .download-btn:hover { background-color: #047857; }
-        .table-wrapper { overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px; }
-        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
-        th { background-color: #f3f4f6; padding: 12px 16px; font-weight: 600; color: #374151; border-b: 1px solid #e5e7eb; text-transform: uppercase; font-size: 12px; tracking: 0.05em; }
+        .table-wrapper { overflow-x: auto; border: 1px solid #e5e7eb; border-radius: 8px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02); }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; white-space: nowrap; }
+        th { background-color: #f3f4f6; padding: 12px 16px; font-weight: 600; color: #374151; border-bottom: 1px solid #e5e7eb; text-transform: uppercase; font-size: 11px; letter-spacing: 0.05em; }
         td { padding: 12px 16px; border-bottom: 1px solid #e5e7eb; color: #4b5563; outline: none; }
         tr:hover { background-color: #f9fafb; }
         td:focus { background-color: #fffbeb; box-shadow: inset 0 0 0 2px #f59e0b; }
     </style>
 </head>
-<body class="bg-gray-50">
+<body>
 
     <div class="container">
-        <h1>Student Attendance Organizer</h1>
-        <p>Upload attendance CSVs, edit the structured table safely in your browser, and download sorted results.</p>
+        <h1>Master Attendance Combiner</h1>
+        <p>Select or drag <strong>multiple CSV files at once</strong>. The tool reads titles dynamically, mapping columns precisely to the master layout sorted alphabetically by name.</p>
 
-        <!-- Step 1: Upload Layout -->
-        <div class="upload-zone" onclick="document.getElementById('csvFile').click()">
-            <input type="file" id="csvFile" accept=".csv" style="display:none;" />
-            <span class="upload-text">Click to upload your CSV file</span>
-            <span class="upload-subtext">Processes instantly without leaving your device</span>
+        <!-- Step 1: Multi-File Upload -->
+        <div class="upload-zone" onclick="document.getElementById('csvFiles').click()">
+            <input type="file" id="csvFiles" accept=".csv" multiple style="display:none;" />
+            <span class="upload-text">Click to select MULTIPLE CSV files</span>
+            <span class="upload-subtext">Hold Ctrl (Windows) or Cmd (Mac) to click and choose multiple files at the same time.</span>
         </div>
 
-        <!-- Step 2: Display & Edit Options -->
+        <!-- Step 2: Consolidated Master Output -->
         <div id="tableContainer" class="hidden">
             <div class="action-bar">
-                <h2>Data Preview (Click cells directly to edit)</h2>
-                <button id="downloadBtn" class="download-btn">Download Organized CSV</button>
+                <h2 id="fileStatus">Master Preview (Click cells to live-edit)</h2>
+                <button id="downloadBtn" class="download-btn">Download Master CSV</button>
             </div>
 
             <div class="table-wrapper">
                 <table>
                     <thead>
                         <tr>
-                            <th>Student Number</th>
-                            <th>Student Name</th>
-                            <th>Attendance Started</th>
-                            <th>Joined At (Beta)</th>
-                            <th>Attendance Stopped</th>
-                            <th>Attendance Duration</th>
-                            <th>Meeting Code</th>
+                            <th>SNo</th>
+                            <th>Participant Name</th>
+                            <th>Attendance Started at</th>
+                            <th>Joined at(beta)</th>
+                            <th>Attendance Stopped at</th>
+                            <th>Attended Duration</th>
+                            <th>Meeting code</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody">
-                        <!-- Content loaded dynamically via local JS -->
-                    </tbody>
+                    <tbody id="tableBody"></tbody>
                 </table>
             </div>
         </div>
     </div>
 
     <script>
-        // Native JavaScript implementation replacing the external CSV helper library
-        const MiniCSV = {
+        // Custom robust local CSV parser targeting explicit headers
+        const MasterCSVParser = {
             parse: function(text) {
                 const lines = [];
                 let row = [""];
@@ -93,114 +90,104 @@
                         row[row.length - 1] += c;
                     }
                 }
-                if (row.length > 1 || row[0] !== '') lines.push(row);
+                if (row.length > 1 || row !== '') lines.push(row);
+                if (lines.length === 0) return [];
                 
                 const headers = lines.shift().map(h => h.trim());
                 return lines.map(line => {
                     let obj = {};
-                    headers.forEach((h, index) => { obj[h] = line[index] || ""; });
+                    headers.forEach((h, index) => { if(h) obj[h] = line[index] || ""; });
                     return obj;
                 });
             },
             stringify: function(headers, data) {
                 const escape = val => `"${String(val).replace(/"/g, '""')}"`;
-                const headerLine = headers.map(escape).join(',');
+                const headerLine = headers.join(','); // Specific formatting header line
                 const bodyLines = data.map(row => headers.map(h => escape(row[h] || "")).join(','));
                 return [headerLine, ...bodyLines].join('\n');
             }
         };
 
-        const csvFileInput = document.getElementById('csvFile');
+        const csvFilesInput = document.getElementById('csvFiles');
         const tableContainer = document.getElementById('tableContainer');
         const tableBody = document.getElementById('tableBody');
         const downloadBtn = document.getElementById('downloadBtn');
+        const fileStatus = document.getElementById('fileStatus');
 
+        // Your exact mandatory layout order
         const targetHeaders = [
-            "Student Number", "Student Name", "Attendance Started", 
-            "Joined At (Beta)", "Attendance Stopped", "Attendance Duration", "Meeting Code"
+            "SNo", "Participant Name", "Attendance Started at", 
+            "Joined at(beta)", "Attendance Stopped at", "Attended Duration", "Meeting code"
         ];
 
-        let processedData = [];
+        let masterData = [];
 
-        csvFileInput.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
+        csvFilesInput.addEventListener('change', async (e) => {
+            const files = e.target.files;
+            if (!files || files.length === 0) return;
 
-            const reader = new FileReader();
-            reader.onload = function(evt) {
-                const rawRows = MiniCSV.parse(evt.target.result);
-                processCSVData(rawRows);
-            };
-            reader.readAsText(file);
-        });
+            masterData = []; // Clear previous load state safely
+            let filesLoaded = 0;
 
-        function processCSVData(rawData) {
-            processedData = rawData.map(row => {
-                let cleaned = {};
-                // Case-insensitive flexible header mapping keys
-                const findVal = (variants) => {
-                    for (let v of variants) {
-                        for (let key in row) {
-                            if (key.toLowerCase().trim() === v.toLowerCase()) return row[key];
-                        }
-                    }
-                    return "";
-                };
-
-                cleaned["Student Number"] = findVal(["student number", "id", "student id", "number"]);
-                cleaned["Student Name"] = findVal(["student name", "name", "full name"]);
-                cleaned["Attendance Started"] = findVal(["attendance started", "started", "start time"]);
-                cleaned["Joined At (Beta)"] = findVal(["joined at (beta)", "joined at", "join time"]);
-                cleaned["Attendance Stopped"] = findVal(["attendance stopped", "stopped", "stop time", "end time"]);
-                cleaned["Attendance Duration"] = findVal(["attendance duration", "duration", "time spent"]);
-                cleaned["Meeting Code"] = findVal(["meeting code", "meeting id", "code"]);
-                return cleaned;
-            });
-
-            sortDataByName();
-            renderTable();
-        }
-
-        function sortDataByName() {
-            processedData.sort((a, b) => {
-                return (a["Student Name"] || "").localeCompare(b["Student Name"] || "", undefined, {sensitivity: 'base'});
-            });
-        }
-
-        function renderTable() {
-            tableBody.innerHTML = "";
-            processedData.forEach((row, rowIndex) => {
-                const tr = document.createElement('tr');
-                targetHeaders.forEach(header => {
-                    const td = document.createElement('td');
-                    td.contentEditable = "true";
-                    td.textContent = row[header] || "";
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const text = await readFileAsText(file);
+                const parsedRows = MasterCSVParser.parse(text);
+                
+                // Map columns safely by searching row header names explicitly
+                const mappedRows = parsedRows.map(row => {
+                    let extracted = {};
                     
-                    td.addEventListener('blur', () => {
-                        processedData[rowIndex][header] = td.textContent.trim();
-                        if (header === "Student Name") {
-                            sortDataByName();
-                            renderTable();
+                    const extractColumn = (targetName, fallbacks) => {
+                        let matchKeys = [targetName, ...fallbacks].map(f => f.toLowerCase().replace(/[\s\(\)_-\s]/g, ''));
+                        for (let originalKey in row) {
+                            let cleanKey = originalKey.toLowerCase().replace(/[\s\(\)_-\s]/g, '');
+                            if (matchKeys.includes(cleanKey)) {
+                                return row[originalKey];
+                            }
                         }
-                    });
-                    tr.appendChild(td);
+                        return "";
+                    };
+
+                    extracted["SNo"] = extractColumn("SNo", ["s no", "student number", "id", "serial"]);
+                    extracted["Participant Name"] = extractColumn("Participant Name", ["participant name", "student name", "name", "full name"]);
+                    extracted["Attendance Started at"] = extractColumn("Attendance Started at", ["attendance started", "started", "start time"]);
+                    extracted["Joined at(beta)"] = extractColumn("Joined at(beta)", ["joined at(beta)", "joined at", "join time"]);
+                    extracted["Attendance Stopped at"] = extractColumn("Attendance Stopped at", ["attendance stopped", "stopped", "stop time", "end time"]);
+                    extracted["Attended Duration"] = extractColumn("Attended Duration", ["attendance duration", "duration", "time spent"]);
+                    extracted["Meeting code"] = extractColumn("Meeting code", ["meeting code", "meeting id", "code"]);
+                    
+                    return extracted;
                 });
-                tableBody.appendChild(tr);
+
+                masterData = masterData.concat(mappedRows);
+                filesLoaded++;
+            }
+
+            fileStatus.textContent = `Master Preview (${filesLoaded} files combined successfully. Click cells to edit)`;
+            sortMasterByName();
+            renderMasterTable();
+        });
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (event) => resolve(event.target.result);
+                reader.onerror = (error) => reject(error);
+                reader.readAsText(file);
             });
-            tableContainer.classList.remove('hidden');
         }
 
-        downloadBtn.addEventListener('click', () => {
-            const csvOutput = MiniCSV.stringify(targetHeaders, processedData);
-            const blob = new Blob([csvOutput], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `organized_attendance_${new Date().toISOString().slice(0,10)}.csv`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        });
-    </script>
-</body>
-</html>
- 
+        function sortMasterByName() {
+            masterData.sort((a, b) => {
+                const nameA = (a["Participant Name"] || "").trim();
+                const nameB = (b["Participant Name"] || "").trim();
+                return nameA.localeCompare(nameB, undefined, {sensitivity: 'base', numeric: true});
+            });
+        }
+
+        function renderMasterTable() {
+            tableBody.innerHTML = "";
+            masterData.forEach((row, rowIndex) => {
+                const tr = document.createElement('tr');
+
